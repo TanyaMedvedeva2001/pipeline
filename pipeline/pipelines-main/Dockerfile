@@ -8,15 +8,18 @@ ENV PIP_DEFAULT_TIMEOUT=100 \
 WORKDIR /app
 COPY poetry.lock pyproject.toml /app/
 
+RUN apk update
+RUN apk add make automake gcc g++ subversion python3-dev
 RUN apk add --no-cache gcc libffi-dev musl-dev python3-dev
 RUN pip install poetry==${POETRY_VERSION} 
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-interaction --no-ansi
 
 COPY . /app/
+
+
 RUN pip install -e .
 
 CMD ["pipelines"]
-
 # docker build -t pipelines .
 # docker run pipelines

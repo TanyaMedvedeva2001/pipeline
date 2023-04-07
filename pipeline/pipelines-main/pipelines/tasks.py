@@ -2,6 +2,11 @@ import sqlite3
 import pandas as pd
 import re
 
+    
+def domain_of_url(url):
+    domain = re.findall('\/\/(.*?)\/', url)
+    return domain[0]
+
 class BaseTask:
     """Base Pipeline Task"""
 
@@ -14,10 +19,7 @@ class BaseTask:
     def __str__(self):
         task_type = self.__class__.__name__
         return f'{task_type}: {self.short_description()}'
-    
-    def domain_of_url(url):
-        domain = re.findall('\/\/(.*?)\/', url)
-        return domain[0]
+
 
 
 class CopyToFile(BaseTask):
@@ -68,7 +70,7 @@ class RunSQL(BaseTask):
     def run(self):        
         con = sqlite3.connect("sqlite_pipeline.db")
         cur = con.cursor()    # Создаем объект-курсор
-        con.create_function("domain_of_url", 1, self.domain_of_url)
+        con.create_function("domain_of_url", 1, domain_of_url)
         try:    # обработка исключения
             cur.executescript(self.sql_query) # Выполняем SQL-запрос
         except sqlite3.DatabaseError:
@@ -93,13 +95,16 @@ class CTAS(BaseTask):
 
     def run(self):
         con = sqlite3.connect("sqlite_pipeline.db")
-        con.create_function("domain_of_url", 1, self.domain_of_url)
+        print(domain_of_url("http://hello.com/home"))
+        con.create_function("domain_of_url", 1, domain_of_url)
         query = f'''Create table {self.table} as {self.sql_query}'''
+        query_drop = f"Drop table if exists {self.table}"
         cur = con.cursor()    # Создаем объект-курсор
+
         try:    # обработка исключения
+            cur.executescript(query_drop)
             cur.executescript(query) # Выполняем SQL-запрос
         except sqlite3.DatabaseError as error:
-            print(query)
             print(f"Error:  `{error}`")
         else:
             print(f"Create table `{self.table}` as SELECT:\n{self.sql_query}")
